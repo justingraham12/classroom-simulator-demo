@@ -1,148 +1,50 @@
-// src/App.tsx
+// src/App.tsx - Updated for new architecture
 import React from 'react';
-import {BrowserRouter, Routes, Route, Navigate, useParams} from 'react-router-dom';
-import {AuthProvider} from './context/AuthContext';
-import {AppProvider} from './context/AppContext';
-import {VideoSettingsProvider} from './context/VideoSettingsContext';
-import PrivateRoute from './components/PrivateRoute';
-import ErrorBoundary from './components/ErrorBoundary';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ErrorBoundary } from './shared/components';
+import { AppProvider } from './app/providers';
+import { MainLayout } from './app/layouts';
+
+// Import views using new architecture
+import { HostApp } from './views/host';
+import { PresentationApp } from './views/presentation';
+import { TeamApp } from './views/team';
+
+// Legacy pages for routes not yet migrated
 import LoginPage from './pages/LoginPage';
-import GameHostPage from './pages/GameHostPage';
-import PresentationPage from './pages/PresentationPage';
 import DashboardPage from './pages/DashboardPage';
 import CreateGamePage from './pages/CreateGamePage';
-import TeamDisplayPage from './pages/TeamDisplayPage';
-
-// Wrapper component to extract sessionId and pass it to providers
-const SessionAwareProviders: React.FC<{ children: React.ReactNode }> = ({children}) => {
-    const {sessionId} = useParams<{ sessionId: string | undefined }>();
-    return (
-        <VideoSettingsProvider sessionId={sessionId}>
-            <AppProvider passedSessionId={sessionId}>
-                {children}
-            </AppProvider>
-        </VideoSettingsProvider>
-    );
-};
-
-// Special wrapper for PresentationPage that handles auth gracefully
-const DisplayWrapper: React.FC = () => {
-    const {sessionId} = useParams<{ sessionId: string | undefined }>();
-
-    return (
-        <AuthProvider>
-            <ErrorBoundary>
-                <VideoSettingsProvider sessionId={sessionId}>
-                    <AppProvider passedSessionId={sessionId}>
-                        <PresentationPage />
-                    </AppProvider>
-                </VideoSettingsProvider>
-            </ErrorBoundary>
-        </AuthProvider>
-    );
-};
 
 function App() {
-    return (
-        <ErrorBoundary>
-            <BrowserRouter>
-                <Routes>
-                    {/* Publicly accessible student-facing routes - NO AUTH REQUIRED */}
-                    <Route path="/student-game/:sessionId" element={
-                        <ErrorBoundary>
-                            <TeamDisplayPage/>
-                        </ErrorBoundary>
-                    }/>
+  return (
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          {/* Authentication routes */}
+          <Route path="/login" element={<LoginPage />} />
 
-                    {/* Student Display - Special handling for same-browser different tab */}
-                    <Route path="/student-display/:sessionId" element={<DisplayWrapper />} />
+          {/* Dashboard routes */}
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/create-game" element={<CreateGamePage />} />
 
-                    {/* All other routes wrapped in AuthProvider */}
-                    <Route path="/*" element={
-                        <AuthProvider>
-                            <Routes>
-                                {/* Teacher Login - Publicly accessible */}
-                                <Route path="/login" element={
-                                    <ErrorBoundary>
-                                        <VideoSettingsProvider>
-                                            <SessionAwareProviders>
-                                                <LoginPage/>
-                                            </SessionAwareProviders>
-                                        </VideoSettingsProvider>
-                                    </ErrorBoundary>
-                                }/>
+          {/* New architecture routes */}
+          <Route path="/classroom/:sessionId" element={
+            <AppProvider>
+              <MainLayout>
+                <HostApp />
+              </MainLayout>
+            </AppProvider>
+          } />
 
-                                {/* Teacher-only authenticated routes */}
-                                <Route path="/dashboard" element={
-                                    <PrivateRoute>
-                                        <ErrorBoundary>
-                                            <VideoSettingsProvider>
-                                                <SessionAwareProviders>
-                                                    <DashboardPage/>
-                                                </SessionAwareProviders>
-                                            </VideoSettingsProvider>
-                                        </ErrorBoundary>
-                                    </PrivateRoute>
-                                }/>
-                                <Route path="/create-game" element={
-                                    <PrivateRoute>
-                                        <ErrorBoundary>
-                                            <VideoSettingsProvider>
-                                                <SessionAwareProviders>
-                                                    <CreateGamePage/>
-                                                </SessionAwareProviders>
-                                            </VideoSettingsProvider>
-                                        </ErrorBoundary>
-                                    </PrivateRoute>
-                                }/>
-                                <Route path="/classroom/:sessionId" element={
-                                    <PrivateRoute>
-                                        <ErrorBoundary>
-                                            <SessionAwareProviders>
-                                                <GameHostPage/>
-                                            </SessionAwareProviders>
-                                        </ErrorBoundary>
-                                    </PrivateRoute>
-                                }/>
-                                <Route path="/classroom" element={
-                                    <PrivateRoute>
-                                        <ErrorBoundary>
-                                            <VideoSettingsProvider>
-                                                <AppProvider passedSessionId="new">
-                                                    <GameHostPage/>
-                                                </AppProvider>
-                                            </VideoSettingsProvider>
-                                        </ErrorBoundary>
-                                    </PrivateRoute>
-                                }/>
+          <Route path="/student-display/:sessionId" element={<PresentationApp />} />
+          <Route path="/student-game/:sessionId" element={<TeamApp />} />
 
-                                {/* Default authenticated route */}
-                                <Route path="/" element={
-                                    <PrivateRoute>
-                                        <VideoSettingsProvider>
-                                            <AppProvider>
-                                                <Navigate to="/dashboard" replace/>
-                                            </AppProvider>
-                                        </VideoSettingsProvider>
-                                    </PrivateRoute>
-                                }/>
-                                {/* Fallback for any other authenticated paths */}
-                                <Route path="*" element={
-                                    <PrivateRoute>
-                                        <VideoSettingsProvider>
-                                            <AppProvider>
-                                                <Navigate to="/dashboard" replace/>
-                                            </AppProvider>
-                                        </VideoSettingsProvider>
-                                    </PrivateRoute>
-                                }/>
-                            </Routes>
-                        </AuthProvider>
-                    }/>
-                </Routes>
-            </BrowserRouter>
-        </ErrorBoundary>
-    );
+          {/* Default redirect */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
+    </ErrorBoundary>
+  );
 }
 
 export default App;
