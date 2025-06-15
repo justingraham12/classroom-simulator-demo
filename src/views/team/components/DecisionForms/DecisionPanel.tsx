@@ -45,7 +45,7 @@ const DecisionPanel: React.FC<DecisionPanelProps> = ({
         sessionId, teamId, currentSlide,
         decisionState: decisionLogic.state,
         isValidSubmission: decisionLogic.isValidSubmission,
-        investmentOptions, challengeOptions, gameStructure
+        gameStructure
     });
 
     if (!isDecisionTime || !currentSlide) {
